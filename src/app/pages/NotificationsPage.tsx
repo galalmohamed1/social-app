@@ -1,62 +1,72 @@
 import { GlassCard } from "@/components/common/GlassCard";
 import NotificationsList from "@/components/common/Notifications/NotificationsList";
-import UnReadList from "@/components/note/UnReadList";
-import type { Notification, NotificationType } from "@/types/Note";
+import type { NotificationType } from "@/types/Note";
 import { CheckCheck } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import useNotesAPI from "@/hooks/useNotesAPI";
+import type { NotificationItem } from "@/types/Note";
+import UnReadList from "@/components/common/Notifications/UnReadList";
 
-export default function NotificationsPage() {
+type Props = {
+  refreshUnreadCount: () => void;
+};
+export default function NotificationsPage({ refreshUnreadCount }: Props) {
   const [active, setActive] = useState<NotificationType>("all");
-  const [notifications, setNotifications] = useState<Notification[]>([
-      {
-        id: 1,
-        name: "mohamed",
-        avatar:
-          "https://pub-3cba56bacf9f4965bbb0989e07dada12.r2.dev/linkedPosts/default-profile.png",
-        time: "1h",
-        message: "mohamed",
-        read: false,
-      },
-      {
-        id: 2,
-        name: "mohamed",
-        avatar:
-          "https://pub-3cba56bacf9f4965bbb0989e07dada12.r2.dev/linkedPosts/default-profile.png",
-        time: "1h",
-        message: "mohamed",
-        read: false,
-      },
-      {
-        id: 3,
-        name: "Galal",
-        avatar:
-          "https://pub-3cba56bacf9f4965bbb0989e07dada12.r2.dev/linkedPosts/default-profile.png",
-        time: "1h",
-        message: "mohamed",
-        read: false,
-      },
-      {
-        id: 4,
-        name: "Mayada",
-        avatar:
-          "https://pub-3cba56bacf9f4965bbb0989e07dada12.r2.dev/linkedPosts/default-profile.png",
-        time: "1h",
-        message: "mohamed",
-        read: false,
-      },
-    ]);
-    const countunread = notifications.filter((n) => !n.read).length;
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { getNotifications, markAllNotificationsRead, readNotificationOnly } =
+    useNotesAPI();
+
+  useEffect(() => {
+    const fetchNotifications = async () => {
+      setIsLoading(true);
+
+      const data = await getNotifications(1, 50);
+      setNotifications(data);
+
+      setIsLoading(false);
+    };
+
+    fetchNotifications();
+    refreshUnreadCount();
+  }, [getNotifications, refreshUnreadCount]);
+
+  const visibleNotifications = useMemo(() => {
+    return active === "unread"
+      ? notifications.filter((n) => !n.isRead)
+      : notifications;
+  }, [notifications, active]);
+
   const handleactive = (type: NotificationType) => {
-    if (type === "all") {
-      setActive("all");
-    } else {
-      setActive("unread");
+    setActive(type);
+  };
+  const handleReadAll = async () => {
+    const result = await markAllNotificationsRead();
+
+    if (result) {
+      setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+      refreshUnreadCount();
     }
   };
-  const handlereadall = () =>{
-    const updatedNotifications = notifications.map((n) => ({ ...n, read: true }));
-    setNotifications(updatedNotifications);
-  }
+  const handleRead = async (id: string) => {
+    const result = await readNotificationOnly(id);
+
+    if (result) {
+      setNotifications((prev) =>
+        prev.map((n) => (n._id === id ? { ...n, isRead: true } : n)),
+      );
+
+      refreshUnreadCount();
+    }
+  };
+
+  const unreadCount = useMemo(() => {
+    return notifications.filter((n) => !n.isRead).length;
+  }, [notifications]);
+
+  console.log("active:", active);
+  console.log("notifications:", notifications);
+  console.log("visibleNotifications:", visibleNotifications);
 
   return (
     <GlassCard className="shadow-sm sm:rounded-2xl">
@@ -71,49 +81,60 @@ export default function NotificationsPage() {
             </p>
           </div>
           <button
-            disabled={notifications.every((n) => n.read)}
-            onClick={handlereadall}
+            disabled={notifications.length === 0 || unreadCount === 0}
+            onClick={handleReadAll}
             className="cursor-pointer inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto"
           >
             <CheckCheck />
             Mark all as read
           </button>
         </div>
+
         <div className="mt-4 grid grid-cols-2 gap-2 sm:flex sm:items-center">
           <button
             type="button"
             onClick={() => handleactive("all")}
-            className={`cursor-pointer rounded-full px-4 py-1.5 text-sm font-bold transition 
-              ${
-                active === "all"
-                  ? "bg-[#1877f2] text-white"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-              }`}
+            className={`cursor-pointer rounded-full px-4 py-1.5 text-sm font-bold transition ${
+              active === "all"
+                ? "bg-[#1877f2] text-white"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+            }`}
           >
             All
           </button>
+
           <button
             type="button"
             onClick={() => handleactive("unread")}
-            className={`cursor-pointer rounded-full px-4 py-1.5 text-sm font-bold transition 
-              ${
-                active === "unread"
-                  ? "bg-[#1877f2] text-white"
-                  : "bg-slate-100 text-slate-700 hover:bg-slate-200"
-              }`}
+            className={`cursor-pointer rounded-full px-4 py-1.5 text-sm font-bold transition ${
+              active === "unread"
+                ? "bg-[#1877f2] text-white"
+                : "bg-slate-100 text-slate-700 hover:bg-slate-200"
+            }`}
           >
-            Unread{" "}
-            {countunread > 0 &&(
-            <span className="rounded-full px-2 py-0.5 text-xs bg-white/25 text-white">{countunread}</span>
+            Unread
+            {unreadCount > 0 && (
+              <span className="rounded-full px-2 py-0.5 text-xs ml-1 bg-white text-[#1877f2]">
+                {unreadCount}
+              </span>
             )}
           </button>
         </div>
       </div>
+
       <div className="space-y-2 p-3 sm:p-4">
         {active === "all" ? (
-          <NotificationsList />
+          <NotificationsList
+            handleRead={handleRead}
+            isLoading={isLoading}
+            visibleNotifications={visibleNotifications}
+          />
         ) : (
-          <UnReadList />
+          <UnReadList
+            notifications={visibleNotifications}
+            isLoading={isLoading}
+            onMarkRead={handleRead}
+          />
         )}
       </div>
     </GlassCard>

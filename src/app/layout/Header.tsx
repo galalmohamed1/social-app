@@ -1,26 +1,31 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Bell, Home, User } from "lucide-react";
+import { MessageCircle, Home, User } from "lucide-react";
 import type { Tab } from "@/types/Note";
 import { useEffect, useState } from "react";
 import useAuthAPI from "@/hooks/useAuthAPI";
+// import useNotesAPI from "@/hooks/useNotesAPI";
 
 const tabs: Tab[] = [
   { name: "Feed", path: "/", icon: Home },
   { name: "Profile", path: "/profile", icon: User },
-  { name: "Notifications", path: "/notifications", icon: Bell },
+  { name: "Notifications", path: "/notifications", icon: MessageCircle },
 ];
-export default function Header() {
+type Props= {
+  count: number
+}
+export default function Header({count}:Props) {
   const [showMenu, setShowMenu] = useState<boolean>(false);
   const location = useLocation();
   const navigate = useNavigate();
   const activeIndex = tabs.findIndex((tab) => tab.path === location.pathname);
   const isNotifications = location.pathname === "/notifications";
   const { logOut } = useAuthAPI();
+ 
   const handleback = () => {
     navigate("/");
   };
-  
+
   const handlelogout = () => {
     logOut();
     navigate("/auth", { replace: true });
@@ -28,25 +33,29 @@ export default function Header() {
   const handlegoprofile = () => {
     navigate("/profile");
   };
-  
+
   const handlemenu = () => {
     setShowMenu((prev) => !prev);
   };
   useEffect(() => {
-  const handleClickOutside = (e: MouseEvent) => {
-    const target = e.target as HTMLElement;
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
 
-    if (!target.closest("[data-user-menu]")) {
-      setShowMenu(false);
-    }
-  };
+      if (!target.closest("[data-user-menu]")) {
+        setShowMenu(false);
+      }
+    };
 
-  document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
 
-  return () => {
-    document.removeEventListener("mousedown", handleClickOutside);
-  };
-}, []);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  console.log("count: ", count);
+  
+
   return (
     <div>
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-2 px-2 py-1.5 sm:gap-3 sm:px-3">
@@ -92,6 +101,7 @@ export default function Header() {
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = location.pathname === tab.path;
+            const isNotificationTab = tab.path === "/notifications";
 
             return (
               <NavLink
@@ -99,32 +109,32 @@ export default function Header() {
                 to={tab.path}
                 className="relative z-10 flex flex-1 items-center justify-center gap-2 px-4 py-2 font-bold transition-all duration-300"
               >
-                {/*  Animated Icon */}
                 <motion.div
                   animate={{
                     scale: isActive ? 1.2 : 1,
                     rotate: isActive ? 5 : 0,
                   }}
                   transition={{ type: "spring", stiffness: 300 }}
-                  className={isActive ? "text-[#1f6fe5]" : "text-slate-600"}
+                  className={`relative ${isActive ? "text-[#1f6fe5]" : "text-slate-600"}`}
                 >
                   <Icon size={18} />
+
+                  {isNotificationTab && count > 0 && (
+                    <span className="absolute -right-1 -top-2 inline-flex min-w-[10px] items-center justify-center rounded-full bg-[#ef4444] px-0.5 text-[8px] font-black leading-4 text-white">
+                      {count}
+                    </span>
+                  )}
                 </motion.div>
 
                 <span
-                  className={`hidden sm:inline text-sm ${
+                  className={`hidden text-sm sm:inline ${
                     isActive ? "text-[#1f6fe5]" : "text-slate-600"
                   }`}
                 >
                   {tab.name}
                 </span>
-                <span
-                  className={`sr-only sm:hidden text-sm ${
-                    isActive ? "text-[#1f6fe5]" : "text-slate-600"
-                  }`}
-                >
-                  {tab.name}
-                </span>
+
+                <span className="sr-only sm:hidden">{tab.name}</span>
               </NavLink>
             );
           })}
@@ -160,60 +170,58 @@ export default function Header() {
               <path d="M4 19h16" />
             </svg>
           </button>
-          {showMenu &&(
-            <div
-            className="absolute right-0 z-50 mt-2 w-52 rounded-xl border border-slate-200 bg-white p-2 shadow-lg block"
-          >
-            <button
-              onClick={handlegoprofile}
-              className="flex cursor-pointer w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="lucide lucide-user"
-                aria-hidden="true"
+          {showMenu && (
+            <div className="absolute right-0 z-50 mt-2 w-52 rounded-xl border border-slate-200 bg-white p-2 shadow-lg block">
+              <button
+                onClick={handlegoprofile}
+                className="flex cursor-pointer w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100"
               >
-                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
-                <circle cx="12" cy="7" r="4"></circle>
-              </svg>
-              Profile
-            </button>
-            <button className="flex cursor-pointer w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="lucide lucide-settings"
-                aria-hidden="true"
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-user"
+                  aria-hidden="true"
+                >
+                  <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+                  <circle cx="12" cy="7" r="4"></circle>
+                </svg>
+                Profile
+              </button>
+              <button className="flex cursor-pointer w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="lucide lucide-settings"
+                  aria-hidden="true"
+                >
+                  <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
+                </svg>
+                Settings
+              </button>
+              <div className="my-1 border-t border-slate-200"></div>
+              <button
+                onClick={handlelogout}
+                className="flex cursor-pointer w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50"
               >
-                <path d="M9.671 4.136a2.34 2.34 0 0 1 4.659 0 2.34 2.34 0 0 0 3.319 1.915 2.34 2.34 0 0 1 2.33 4.033 2.34 2.34 0 0 0 0 3.831 2.34 2.34 0 0 1-2.33 4.033 2.34 2.34 0 0 0-3.319 1.915 2.34 2.34 0 0 1-4.659 0 2.34 2.34 0 0 0-3.32-1.915 2.34 2.34 0 0 1-2.33-4.033 2.34 2.34 0 0 0 0-3.831A2.34 2.34 0 0 1 6.35 6.051a2.34 2.34 0 0 0 3.319-1.915"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-              Settings
-            </button>
-            <div className="my-1 border-t border-slate-200"></div>
-            <button
-              onClick={handlelogout}
-              className="flex cursor-pointer w-full items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-rose-600 hover:bg-rose-50"
-            >
-              Logout
-            </button>
-          </div>)}
-          
+                Logout
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>

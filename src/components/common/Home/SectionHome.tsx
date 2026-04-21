@@ -1,168 +1,46 @@
-import { GlassCard } from "@/components/common/GlassCard";
-import SidebarButton from "@/components/common/Home/SidebarButton";
-import type { Asideleft, Post, Privacy, Users } from "@/types/Note";
-import {
-  Bookmark,
-  Earth,
-  Lock,
-  Newspaper,
-  Sparkles,
-  UsersRound,
-  X,
-} from "lucide-react";
-import { memo, useEffect, useRef, useState } from "react";
-import EmojiPicker from "emoji-picker-react";
-import PostsSection from "./PostsSection";
-import PrograssPost from "../PrograssPost";
+// import { GlassCard } from "@/components/common/GlassCard";
+import type { Post, Privacy, Users } from "@/types/Note";
+import { Earth, Lock, UsersRound } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import useNotesAPI from "@/hooks/useNotesAPI";
+import PostsSection from "./PostsSection";
 import PostsSkeleton from "../PostsSkeleton";
-import { Bounce, toast } from "react-toastify";
+import PrograssPost from "../PrograssPost";
+import CreatePostCard from "./CreatePostCard";
 
 type Props = {
   profileData: Users | null;
+  setprofileData: React.Dispatch<React.SetStateAction<Users | null>>;
+  posts: Post[];
+  setPosts: React.Dispatch<React.SetStateAction<Post[]>>;
+  isPostsLoading: boolean;
+  isLoadingMore: boolean;
+  lastPostRef: (node: HTMLDivElement | null) => void;
 };
 
-const SectionHome = ({ profileData }: Props) => {
-  const [isActive, setIsActive] = useState("feed");
+export default function SectionHome({
+  profileData,
+  setprofileData,
+  posts,
+  setPosts,
+  isPostsLoading,
+  isLoadingMore,
+  lastPostRef,
+}: Props) {
   const [privacy, setPrivacy] = useState<Privacy>("public");
-  const [postText, setPostText] = useState<string>("");
+  const [postText, setPostText] = useState("");
   const [open, setOpen] = useState(false);
   const [selectedImages, setSelectedImages] = useState<string[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishProgress, setPublishProgress] = useState(0);
-  const { createPost, getAllPosts, deletePost } = useNotesAPI();
-  const [imageFiles, setImageFiles] = useState<File[]>([]);
-  const [getallposts, setGetAllPosts] = useState<Post[]>([]);
-  const [isPostsLoading, setIsPostsLoading] = useState(true);
+  const [publishingText, setPublishingText] = useState("");
+  const [publishingImages, setPublishingImages] = useState<string[]>([]);
+
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
-  useEffect(() => {
-    const fetchAllPosts = async () => {
-      setIsPostsLoading(true);
-      const allposts = await getAllPosts();
-      if (allposts) {
-        // console.log("All posts:", allposts);
-        setGetAllPosts(allposts);
-        setIsPostsLoading(false);
-      }
-    };
 
-    fetchAllPosts();
-  }, [getAllPosts]);
+  const { createPost, deletePost, updatePost } = useNotesAPI();
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-
-    const imageUrls = files.map((file) => URL.createObjectURL(file));
-
-    setImageFiles((prev) => [...prev, ...files]);
-    setSelectedImages((prev) => [...prev, ...imageUrls]);
-  };
-
-  const handleDeleteImage = (index: number) => {
-    setSelectedImages((prev) => {
-      const imageToRemove = prev[index];
-      if (imageToRemove) URL.revokeObjectURL(imageToRemove);
-      return prev.filter((_, i) => i !== index);
-    });
-
-    setImageFiles((prev) => prev.filter((_, i) => i !== index));
-  };
-
-  const handleCreatePost = async () => {
-    if (!postText.trim() && selectedImages.length === 0) return;
-
-    setIsPublishing(true);
-    setPublishProgress(0);
-
-    const formData = new FormData();
-    formData.append("body", postText);
-    formData.append("privacy", privacy);
-
-    imageFiles.forEach((file) => {
-      formData.append("image", file);
-    });
-
-    const result = await createPost(formData);
-    if (!result) {
-      setIsPublishing(false);
-      setPublishProgress(0);
-      return;
-    }
-    let progress = 0;
-
-    const interval = setInterval(() => {
-      progress += Math.floor(Math.random() * 15) + 8;
-
-      if (progress >= 100) {
-        setPublishProgress(progress);
-        clearInterval(interval);
-
-        setTimeout(async () => {
-          const allposts = await getAllPosts();
-          if (allposts) {
-            setGetAllPosts(allposts);
-          }
-          setIsPublishing(false);
-          setPublishProgress(0);
-          setPostText("");
-          selectedImages.forEach((url) => URL.revokeObjectURL(url));
-          setSelectedImages([]);
-          setImageFiles([]);
-        }, 300);
-      } else {
-        setPublishProgress(progress);
-      }
-    }, 200);
-  };
-
-  const handledelete = async (postId: string) => {
-    const result = await deletePost(postId);
-    if (result) {
-      setGetAllPosts((prev) =>
-        prev.filter((post) => (post._id || post.id) !== postId),
-      );
-      toast.success("Delete successful ✅", {
-        position: "top-center",
-        autoClose: 2000,
-        transition: Bounce,
-      });
-    } else {
-      toast.error("Delete failed ❌", {
-        position: "top-center",
-        autoClose: 2000,
-        transition: Bounce,
-      });
-    }
-  };
-
-  const renderIcon = () => {
-    switch (privacy) {
-      case "public":
-        return <Earth width={12} height={12} />;
-      case "following":
-        return <UsersRound width={12} height={12} />;
-      case "only_me":
-        return <Lock width={12} height={12} />;
-      default:
-        return null;
-    }
-  };
-  const handleside = (mode: Asideleft) => {
-    if (mode === "feed") {
-      setIsActive("feed");
-    } else if (mode === "myposts") {
-      setIsActive("myposts");
-    } else if (mode === "community") {
-      setIsActive("community");
-    } else if (mode === "saved") {
-      setIsActive("saved");
-    }
-  };
-
-  const handleEmojy = () => {
-    setOpen((prev) => !prev);
-  };
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       const target = e.target as HTMLElement;
@@ -179,270 +57,277 @@ const SectionHome = ({ profileData }: Props) => {
     };
   }, []);
 
+  const renderIcon = () => {
+    switch (privacy) {
+      case "public":
+        return <Earth width={12} height={12} />;
+      case "following":
+        return <UsersRound width={12} height={12} />;
+      case "only_me":
+        return <Lock width={12} height={12} />;
+      default:
+        return <Earth width={12} height={12} />;
+    }
+  };
+
+  const handleEmojy = () => {
+    setOpen((prev) => !prev);
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (selectedImages[0]) {
+      URL.revokeObjectURL(selectedImages[0]);
+    }
+
+    const imageUrl = URL.createObjectURL(file);
+
+    setImageFiles([file]);
+    setSelectedImages([imageUrl]);
+  };
+  const handleDeleteImage = () => {
+    if (selectedImages[0]) {
+      URL.revokeObjectURL(selectedImages[0]);
+    }
+
+    setSelectedImages([]);
+    setImageFiles([]);
+  };
+
+  const handleCreatePost = async () => {
+    const currentText = textareaRef.current?.value || postText;
+
+    if (!currentText.trim() && selectedImages.length === 0) return;
+
+    const currentImages = [...selectedImages];
+    const currentFiles = [...imageFiles];
+
+    setPublishingText(currentText);
+    setPublishingImages(currentImages);
+    setIsPublishing(true);
+    setPublishProgress(0);
+
+    let progress = 0;
+
+    const interval = setInterval(() => {
+      progress += Math.floor(Math.random() * 12) + 6;
+
+      if (progress >= 90) {
+        progress = 90;
+        clearInterval(interval);
+      }
+
+      setPublishProgress(progress);
+    }, 250);
+
+    const formData = new FormData();
+    formData.append("body", currentText);
+    formData.append("privacy", privacy);
+
+    currentFiles.forEach((file) => {
+      formData.append("image", file);
+    });
+
+    const result = await createPost(formData);
+
+    clearInterval(interval);
+
+    if (!result) {
+      setIsPublishing(false);
+      setPublishProgress(0);
+      setPublishingText("");
+      setPublishingImages([]);
+      return;
+    }
+
+    const newPost = {
+      ...result,
+      user: {
+        ...profileData!,
+        _id: profileData?._id || "",
+        id: profileData?.id || profileData?._id || "",
+      },
+      liked: result.likes?.includes(profileData?._id || "") || false,
+      commentsCount: result.commentsCount || 0,
+      sharesCount: result.sharesCount || 0,
+    };
+
+    setPublishProgress(100);
+
+    setTimeout(() => {
+      setPosts((prev) => [newPost, ...prev]);
+
+      setIsPublishing(false);
+      setPublishProgress(0);
+      setPublishingText("");
+      setPublishingImages([]);
+
+      setPostText("");
+
+      if (textareaRef.current) {
+        textareaRef.current.value = "";
+      }
+
+      currentImages.forEach((url) => URL.revokeObjectURL(url));
+      setSelectedImages([]);
+      setImageFiles([]);
+    }, 400);
+  };
+
+  const handledelete = async (postId: string) => {
+    const deletedPost = posts.find((post) => (post._id || post.id) === postId);
+    const wasSaved = deletedPost?.bookmarked === true;
+
+    const result = await deletePost(postId);
+
+    if (result) {
+      if (wasSaved) {
+        setprofileData((prev) =>
+          prev
+            ? {
+                ...prev,
+                bookmarksCount: Math.max((prev.bookmarksCount || 0) - 1, 0),
+              }
+            : prev,
+        );
+      }
+
+      setPosts((prev) =>
+        prev.filter((post) => (post._id || post.id) !== postId),
+      );
+    }
+  };
+
+  const handleChangePrivacy = async (
+  postId: string,
+  newPrivacy: Privacy,
+  currentBody: string
+) => {
+  setPrivacy(newPrivacy);
+
+  const result = await updatePost(postId, currentBody, newPrivacy);
+
+  if (result) {
+    setPosts((prev) =>
+      prev.map((post) =>
+        (post._id || post.id) === postId
+          ? {
+                ...post,
+                ...result,
+                user: {
+                  ...profileData!,
+                  _id: profileData?._id || "",
+                   id: profileData?._id || profileData?.id || "",
+                },
+                liked: result.likes?.includes(profileData?._id || profileData?.id || "") || false,
+              }
+          : post
+      )
+    );
+  }
+};
+
+  const handleEditPost = async (
+    postId: string,
+    body: string,
+    privacy: string,
+  ) => {
+    const result = await updatePost(postId, body, privacy);
+
+    if (result) {
+      setPosts((prev) =>
+        prev.map((post) =>
+          (post._id || post.id) === postId
+            ? {
+                ...post,
+                ...result,
+                user: {
+                  ...profileData!,
+                  _id: profileData?._id || "",
+                   id: profileData?._id || profileData?.id || "",
+                },
+                liked: result.likes?.includes(profileData?._id || profileData?.id || "") || false,
+              }
+            : post,
+        ),
+      );
+    }
+  };
+
   return (
-    <section className="space-y-4">
-      <GlassCard className="p-2 shadow-sm xl:hidden">
-        <div className="grid grid-cols-2 gap-2">
-          <SidebarButton
-            active={isActive === "feed"}
-            onClick={() => handleside("feed")}
-            icon={<Newspaper />}
-            label="Feed"
-          />
-          <SidebarButton
-            active={isActive === "myposts"}
-            onClick={() => handleside("myposts")}
-            icon={<Sparkles />}
-            label="My Posts"
-          />
-          <SidebarButton
-            active={isActive === "community"}
-            onClick={() => handleside("community")}
-            icon={<Earth />}
-            label="Community"
-          />
-          <SidebarButton
-            active={isActive === "saved"}
-            onClick={() => handleside("saved")}
-            icon={<Bookmark />}
-            label="Saved"
-          />
-        </div>
-      </GlassCard>
-      <div className="space-y-3 xl:hidden">
-        <button
-          type="button"
-          className="inline-flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left shadow-sm"
-        >
-          <span className="inline-flex items-center gap-2 text-sm font-extrabold text-slate-900">
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width={17}
-              height={17}
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth={2}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              className="lucide lucide-users text-[#1877f2]"
-              aria-hidden="true"
-            >
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-              <path d="M16 3.128a4 4 0 0 1 0 7.744" />
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-              <circle cx={9} cy={7} r={4} />
-            </svg>
-            Suggested Friends
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs font-bold text-slate-600">
-              5
-            </span>
-            <span className="text-xs font-bold text-[#1877f2]">Show</span>
-          </span>
-        </button>
-      </div>
-      <GlassCard className="p-4 shadow-sm">
-        <div className="mb-3 flex items-start gap-3">
-          <img
-            alt={profileData?.name}
-            className="h-11 w-11 rounded-full object-cover"
-            src={profileData?.photo}
-          />
-          <div className="flex-1">
-            <p className="text-base font-extrabold text-slate-900">
-              {profileData?.name}
-            </p>
-            <div className="mt-1 inline-flex items-center gap-2 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-700">
-              {renderIcon()}
-              <select
-                value={privacy}
-                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                  setPrivacy(e.target.value as Privacy)
-                }
-                className="bg-transparent outline-none"
-              >
-                <option value="public">Public</option>
-                <option value="following">Followers</option>
-                <option value="only_me">Only me</option>
-              </select>
-            </div>
-          </div>
-        </div>
-        <div className="relative">
-          <textarea
-            rows={4}
-            ref={textareaRef}
-            placeholder="What's on your mind, Galal?"
-            className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[17px] leading-relaxed text-slate-800 outline-none transition focus:border-[#1877f2] focus:bg-white"
-            // defaultValue={""}
-            onChange={(e) => setPostText(e.target.value)}
-          />
-          <div className="relative mt-3">
-            {selectedImages.length > 0 && (
-              <div className="mt-3 grid grid-cols-2 gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3 sm:grid-cols-3">
-                {selectedImages.map((image, index) => (
-                  <div
-                    key={index}
-                    className="group relative flex items-center justify-center overflow-hidden rounded-xl border border-slate-200 bg-white "
-                  >
-                    <img
-                      src={image}
-                      alt={`Preview ${index + 1}`}
-                      className="h-40 w-full object-contain"
-                    />
+    <>
+      <CreatePostCard
+        profileData={profileData}
+        privacy={privacy}
+        setPrivacy={setPrivacy}
+        postText={postText}
+        setPostText={setPostText}
+        selectedImages={selectedImages}
+        handleDeleteImage={handleDeleteImage}
+        handleImageChange={handleImageChange}
+        handleEmojy={handleEmojy}
+        handleCreatePost={handleCreatePost}
+        renderIcon={renderIcon}
+        open={open}
+        textareaRef={textareaRef}
+      />
 
-                    <button
-                      type="button"
-                      onClick={() => handleDeleteImage(index)}
-                      className="absolute right-2 top-2 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white opacity-0 transition group-hover:opacity-100 hover:bg-red-500"
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
-          <div className="relative flex items-center gap-2">
-            <label className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100">
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width={18}
-                height={18}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="lucide lucide-image text-emerald-600"
-                aria-hidden="true"
-              >
-                <rect width={18} height={18} x={3} y={3} rx={2} ry={2} />
-                <circle cx={9} cy={9} r={2} />
-                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
-              </svg>
-              <span className="hidden sm:inline">Photo/video</span>
-              <input
-                accept="image/*"
-                className="hidden"
-                type="file"
-                onChange={handleImageChange}
-              />
-            </label>
-            <button
-              type="button"
-              onClick={handleEmojy}
-              className="flex cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-100"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width={18}
-                height={18}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="lucide lucide-smile text-amber-500"
-                aria-hidden="true"
-              >
-                <circle cx={12} cy={12} r={10} />
-                <path d="M8 14s1.5 2 4 2 4-2 4-2" />
-                <line x1={9} x2="9.01" y1={9} y2={9} />
-                <line x1={15} x2="15.01" y1={9} y2={9} />
-              </svg>
-              <span className="hidden sm:inline">Feeling/activity</span>
-            </button>
-            <div className="absolute left-0 top-[calc(100%+8px)] z-20 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl">
-              <div>
-                <EmojiPicker
-                  data-emojy-menu
-                  open={open}
-                  onEmojiClick={(emojiData) => {
-                    const newText =
-                      (textareaRef.current?.value || "") + emojiData.emoji;
+      {isPublishing && (
+        <PrograssPost
+          publishProgress={publishProgress}
+          postText={publishingText}
+          publishingImages={publishingImages}
+          profileData={profileData}
+        />
+      )}
 
-                    if (textareaRef.current) {
-                      textareaRef.current.value = newText;
-                      textareaRef.current.focus();
-                    }
-
-                    setPostText(newText);
-                  }}
-                />
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={handleCreatePost}
-              disabled={postText.trim() === "" && selectedImages.length === 0}
-              className="flex cursor-pointer items-center gap-2 rounded-lg bg-[#1877f2] px-5 py-2 text-sm font-extrabold text-white shadow-sm transition-colors hover:bg-[#166fe5] disabled:opacity-60"
-            >
-              Post
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                width={16}
-                height={16}
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="lucide lucide-send"
-                aria-hidden="true"
-              >
-                <path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z" />
-                <path d="m21.854 2.147-10.94 10.939" />
-              </svg>
-            </button>
-          </div>
-        </div>
-      </GlassCard>
-      <div className="space-y-4">
-        {isPublishing && (
-          <PrograssPost
-            publishProgress={publishProgress}
-            postText={postText}
-            profileData={profileData}
-          />
-        )}
-        {isPostsLoading ? (
-          <PostsSkeleton />
-        ) : getallposts?.length > 0 ? (
-          getallposts.map((post) => {
+      {isPostsLoading ? (
+        <PostsSkeleton />
+      ) : posts.length > 0 ? (
+        <>
+          {posts.map((post, index) => {
             const postId = post.id || post._id;
             const images = Array.isArray(post.image)
               ? post.image
               : post.image
                 ? [post.image]
                 : [];
+
+            const isLastPost = index === posts.length - 1;
+
             return (
-              <PostsSection
-                key={postId}
-                post={post}
-                postId={postId}
-                images={images}
-                profileId={profileData?._id}
-                handledelete={() => handledelete(postId)}
-              />
+              <div key={postId} ref={isLastPost ? lastPostRef : null}>
+                <PostsSection
+                  post={post}
+                  postId={postId}
+                  images={images}
+                  profileId={profileData?._id}
+                  handledelete={() => handledelete(postId)}
+                  setPosts={setPosts}
+                  handleEditPost={() =>
+                    handleEditPost(postId, post.body, post.privacy)
+                  }
+                  handleChangePrivacy={(newPrivacy) =>
+                    handleChangePrivacy(postId, newPrivacy, post.body)
+                  }
+                />
+              </div>
             );
-          })
-        ) : (
-          <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm">
-            No posts yet. Be the first one to publish.
-          </div>
-        )}
-      </div>
-    </section>
+          })}
+
+          {isLoadingMore && (
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 text-center text-sm font-semibold text-slate-500 shadow-sm">
+              Loading more posts...
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="rounded-2xl border border-slate-200 bg-white p-10 text-center text-slate-500 shadow-sm">
+          No posts yet. Be the first one to publish.
+        </div>
+      )}
+    </>
   );
-};
-export default memo(SectionHome);
+}

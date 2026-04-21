@@ -2,22 +2,21 @@ import type { NotificationItem } from "@/types/Note";
 import NotificationCard from "./NotificationCard";
 import NoNotifications from "@/components/note/NoNotifications";
 
+
 type Props = {
-  handleRead: (id: string) => void;
-  visibleNotifications: NotificationItem[];
+  notifications: NotificationItem[];
   isLoading: boolean;
+  onMarkRead: (id: string) => void;
 };
 
-export default function NotificationsList({
-  isLoading,
-  visibleNotifications,
-  handleRead,
-}: Props) {
+function UnReadList({ notifications, isLoading, onMarkRead }: Props) {
+  const unread = notifications.filter((n) => !n.isRead);
+
   if (isLoading) {
     return (
       <div className="rounded-xl border border-slate-200 bg-slate-50 p-8 text-center">
         <p className="text-sm font-semibold text-slate-500">
-          Loading notifications...
+          Loading unread notifications...
         </p>
       </div>
     );
@@ -25,12 +24,12 @@ export default function NotificationsList({
 
   return (
     <>
-      {visibleNotifications.length > 0 ? (
-        visibleNotifications.map((notification) => (
+      {unread.length > 0 ? (
+        unread.map((n) => (
           <NotificationCard
-            key={notification._id}
-            notification={notification}
-            onMarkRead={handleRead}
+            key={n._id}
+            notification={n}
+            onMarkRead={onMarkRead}
           />
         ))
       ) : (
@@ -39,3 +38,5 @@ export default function NotificationsList({
     </>
   );
 }
+
+export default UnReadList;

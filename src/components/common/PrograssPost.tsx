@@ -4,6 +4,7 @@ type Props={
     publishProgress:number;
     postText:string | null;
     profileData: Users | null;
+    publishingImages?: string[]
 }
 function PrograssPost({publishProgress, postText, profileData}:Props){
   return (

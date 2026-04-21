@@ -1,12 +1,84 @@
 import { GlassCard } from "@/components/common/GlassCard";
-import { Bookmark, FileText, Mail, Users, X } from "lucide-react";
-import { useState } from "react";
+import PageLoader from "@/components/common/PageLoader";
+import PostsSkeleton from "@/components/common/PostsSkeleton";
+import PostsProfile from "@/components/common/Profile/PostsProfile";
+import useNotesAPI from "@/hooks/useNotesAPI";
+import type { buttonProfile, PostProfile, Users } from "@/types/Note";
+import { Bookmark, FileText, Mail, UsersRound, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 
 const ProfilePage = () => {
   const [open, setOpen] = useState(false);
+  const [active, setActive] = useState<buttonProfile>("MyPosts");
+  const [isLoading, setIsLoading] = useState(true);
+  const [profileData, setProfileData] = useState<Users | null>(null);
+  const [getallposts, setGetAllPosts] = useState<PostProfile[]>([]);
+  const [isPostsLoading, setIsPostsLoading] = useState(true);
+  const { getAllPosts, getMyProfileData } = useNotesAPI();
 
-  const handleZoom = () =>{
-    setOpen((prev) => !prev)
+  const handleSelect = (mode: buttonProfile) => {
+    setActive(mode);
+  };
+
+  useEffect(() => {
+    const fetchMyPosts = async () => {
+      setIsPostsLoading(true);
+      const allposts = await getAllPosts("me", 1, 50);
+      if (allposts) {
+        setGetAllPosts(allposts);
+        console.log("getallposts:", getallposts);
+        setIsPostsLoading(false);
+      } else {
+        setGetAllPosts([]);
+      }
+    };
+
+    fetchMyPosts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [getAllPosts]);
+
+  useEffect(() => {
+    const fetchProfileData = async () => {
+      try {
+        const data = await getMyProfileData();
+        if (data) {
+          console.log("Profile data:", data);
+          setProfileData(data);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchProfileData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const filteredPosts = useMemo(() => {
+    if (!Array.isArray(getallposts)) return [];
+    return getallposts.filter((post) => {
+      if (active === "MyPosts") {
+        return profileData?._id ? post.user?._id === profileData._id : false;
+      }
+
+      if (active === "Saved") {
+        return !!post.bookmarked;
+      }
+
+      return true;
+    });
+  }, [getallposts, active, profileData]);
+
+  const myPostsCount = useMemo(() => {
+    return getallposts.filter((post) => post.user?._id === profileData?._id)
+      .length;
+  }, [getallposts, profileData]);
+
+  const handleZoom = () => {
+    setOpen((prev) => !prev);
+  };
+  if (isLoading) {
+    return <PageLoader />;
   }
   return (
     <>
@@ -34,7 +106,7 @@ const ProfilePage = () => {
                         <img
                           alt="Galal"
                           className="h-28 w-28 rounded-full border-4 border-white object-cover shadow-md ring-2 ring-[#dbeafe]"
-                          src="https://pub-3cba56bacf9f4965bbb0989e07dada12.r2.dev/linkedPosts/default-profile.png"
+                          src={profileData?.photo}
                         />
                       </button>
                       <label className="absolute bottom-1 right-1 flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-[#1877f2] text-white opacity-100 shadow-sm transition duration-200 hover:bg-[#166fe5] sm:opacity-0 sm:group-hover/avatar:opacity-100 sm:group-focus-within/avatar:opacity-100">
@@ -73,9 +145,9 @@ const ProfilePage = () => {
                       </button>
                     </div>
                     <div className="min-w-0 pb-1">
-                      <h2 className="text-2xl font-black sm:text-4xl">Galal</h2>
+                      <h2 className="text-2xl font-black sm:text-4xl">{profileData?.name}</h2>
                       <p className="mt-1 text-lg font-semibold text-slate-500 sm:text-xl">
-                        @galalmohamed
+                        {profileData?.username}
                       </p>
                       <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#d7e7ff] bg-[#eef6ff] px-3 py-1 text-xs font-bold text-[#0b57d0]">
                         <svg
@@ -103,9 +175,9 @@ const ProfilePage = () => {
                 </div>
                 <div className="grid grid-cols-3 gap-2 lg:w-[500px]">
                   {[
-                    { label: "Followers", value: 7 },
-                    { label: "Following", value: 3 },
-                    { label: "Bookmarks", value: 0 },
+                    { label: "Followers", value: profileData?.followersCount },
+                    { label: "Following", value: profileData?.followingCount },
+                    { label: "Bookmarks", value: profileData?.bookmarksCount },
                   ].map((item, i) => (
                     <div
                       key={i}
@@ -126,10 +198,10 @@ const ProfilePage = () => {
                   <div className="mt-3 space-y-2 text-sm text-slate-600">
                     <p className="flex items-center gap-2">
                       <Mail width={15} height={15} />
-                      gm3308769@gmail.com
+                      {profileData?.email}
                     </p>
                     <p className="flex items-center gap-2">
-                      <Users width={15} height={15} />
+                      <UsersRound width={15} height={15} />
                       Active on Route Posts
                     </p>
                   </div>
@@ -140,13 +212,17 @@ const ProfilePage = () => {
                     <p className="text-xs font-bold uppercase tracking-wide text-[#1f4f96]">
                       My posts
                     </p>
-                    <p className="mt-1 text-xl font-black text-slate-900">0</p>
+                    <p className="mt-1 text-xl font-black text-slate-900">
+                      {myPostsCount}
+                    </p>
                   </GlassCard>
                   <GlassCard className="border border-[#dbeafe] bg-[#f6faff] px-4 py-3">
                     <p className="text-xs font-bold uppercase tracking-wide text-[#1f4f96]">
                       Saved posts
                     </p>
-                    <p className="mt-1 text-xl font-black text-slate-900">0</p>
+                    <p className="mt-1 text-xl font-black text-slate-900">
+                      {profileData?.bookmarksCount}
+                    </p>
                   </GlassCard>
                 </div>
               </div>
@@ -158,28 +234,66 @@ const ProfilePage = () => {
         <section className="space-y-4">
           <div className="flex items-center justify-between rounded-2xl border bg-white p-3">
             <div className="flex items-center gap-2 rounded-xl bg-slate-100 p-1.5">
-              <button className="flex items-center gap-1 rounded-lg bg-white px-4 py-2 text-sm font-bold text-blue-600 cursor-pointer">
+              <button
+                onClick={() => handleSelect("MyPosts")}
+                className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-bold cursor-pointer
+                ${
+                  active === "MyPosts"
+                    ? "bg-white text-blue-600"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
                 <FileText width={15} height={15} />
                 My Posts
               </button>
 
-              <button className="flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-bold text-slate-600 cursor-pointer">
+              <button
+                onClick={() => handleSelect("Saved")}
+                className={`flex items-center gap-1 rounded-lg px-4 py-2 text-sm font-bold cursor-pointer ${
+                  active === "Saved"
+                    ? "bg-white text-blue-600"
+                    : "text-slate-600 hover:bg-slate-100"
+                }`}
+              >
                 <Bookmark width={15} height={15} />
                 Saved
               </button>
             </div>
 
             <span className="rounded-full bg-blue-100 px-3 py-1 text-xs font-bold text-blue-600">
-              0
+              {active === "Saved" ? profileData?.bookmarksCount : myPostsCount}
             </span>
           </div>
 
           {/* Empty */}
-          <p className="rounded-xl border bg-slate-50 p-4 text-sm text-slate-500">
-            You have not posted yet.
-          </p>
+          {isPostsLoading ? (
+            <PostsSkeleton />
+          ) : filteredPosts?.length > 0 ? (
+            filteredPosts.map((post) => {
+              const postId = post.id || post._id;
+              const images = Array.isArray(post.image)
+                ? post.image
+                : post.image
+                  ? [post.image]
+                  : [];
+              return (
+                <PostsProfile
+                  key={postId}
+                  post={post}
+                  postId={postId}
+                  images={images}
+                />
+              );
+            })
+          ) : (
+            <p className="rounded-xl border bg-slate-50 p-4 text-sm text-slate-500">
+              You have not posted yet.
+            </p>
+          )}
         </section>
-        <div className={`fixed inset-0 z-[80] flex items-center justify-center bg-black/90 p-4 sm:p-8 lg:p-12 ${open ? 'block' : 'hidden'}`}>
+        <div
+          className={`fixed inset-0 z-[80] flex items-center justify-center bg-black/90 p-4 sm:p-8 lg:p-12 ${open ? "block" : "hidden"}`}
+        >
           <button
             type="button"
             onClick={handleZoom}
@@ -190,7 +304,7 @@ const ProfilePage = () => {
           <img
             alt="Galal profile photo"
             className="max-h-full max-w-full object-contain"
-            src="https://pub-3cba56bacf9f4965bbb0989e07dada12.r2.dev/linkedPosts/default-profile.png"
+            src={profileData?.photo}
           />
         </div>
       </div>
@@ -199,61 +313,3 @@ const ProfilePage = () => {
 };
 
 export default ProfilePage;
-
-{
-  /* Profile Info */
-}
-// <div className="-mt-12 px-3 pb-5 sm:-mt-16 sm:px-8 z-10">
-//   <div className="rounded-3xl bg-white p-5 sm:p-7">
-
-//     <div className="flex flex-col gap-6 lg:flex-row lg:justify-between">
-
-//       {/* User */}
-//       <div className="flex items-end gap-4">
-
-//         {/* Avatar */}
-//         <div className="relative">
-//           <img
-//             src="https://pub-3cba56bacf9f4965bbb0989e07dada12.r2.dev/linkedPosts/default-profile.png"
-//             className="h-28 w-28 rounded-full border-4 border-white"
-//           />
-
-//           <label className="absolute bottom-1 right-1 cursor-pointer rounded-full bg-blue-600 p-2 text-white">
-//             📷
-//             <input type="file" className="hidden" />
-//           </label>
-//         </div>
-
-//         {/* Name */}
-//         <div>
-//           <h2 className="text-2xl font-black sm:text-4xl">
-//             Galal
-//           </h2>
-//           <p className="text-slate-500">@galalmohamed</p>
-//         </div>
-//       </div>
-
-//       {/* Stats */}
-//       <div className="grid grid-cols-3 gap-2 lg:w-[500px]">
-//         {[
-//           { label: "Followers", value: 7 },
-//           { label: "Following", value: 3 },
-//           { label: "Bookmarks", value: 0 },
-//         ].map((item, i) => (
-//           <div
-//             key={i}
-//             className="rounded-2xl border bg-white p-3 text-center"
-//           >
-//             <p className="text-xs text-slate-500">
-//               {item.label}
-//             </p>
-//             <p className="text-2xl font-black">
-//               {item.value}
-//             </p>
-//           </div>
-//         ))}
-//       </div>
-//     </div>
-
-//   </div>
-// </div>
