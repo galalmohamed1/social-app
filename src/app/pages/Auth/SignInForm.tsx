@@ -88,7 +88,7 @@ export default function SignInForm() {
 
   useEffect(() => {
     if (loginData) {
-      navigate("/");
+      navigate("/home");
     }
   }, [loginData, navigate]);
 
@@ -114,6 +114,7 @@ export default function SignInForm() {
             value={formData.email}
             onChange={handleChange}
             aria-invalid={!!errors.email}
+            autoComplete="email"
             className={
               errors.email ? "border-red-500 focus:border-red-500" : ""
             }
@@ -132,6 +133,7 @@ export default function SignInForm() {
             value={formData.password}
             onChange={handleChange}
             aria-invalid={!!errors.password}
+            autoComplete="current-password"
             className={
               errors.password ? "border-red-500 focus:border-red-500" : ""
             }

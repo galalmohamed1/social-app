@@ -11,17 +11,17 @@ const tabs: Tab[] = [
   { name: "Profile", path: "/profile", icon: User },
   { name: "Notifications", path: "/notifications", icon: MessageCircle },
 ];
-type Props= {
-  count: number
-}
-export default function Header({count}:Props) {
+type Props = {
+  count: number;
+};
+export default function Header({ count }: Props) {
   const [showMenu, setShowMenu] = useState<boolean>(false);
   const location = useLocation();
   const navigate = useNavigate();
   const activeIndex = tabs.findIndex((tab) => tab.path === location.pathname);
   const isNotifications = location.pathname === "/notifications";
   const { logOut } = useAuthAPI();
- 
+
   const handleback = () => {
     navigate("/");
   };
@@ -54,7 +54,6 @@ export default function Header({count}:Props) {
   }, []);
 
   console.log("count: ", count);
-  
 
   return (
     <div>

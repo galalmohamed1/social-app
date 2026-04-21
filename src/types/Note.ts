@@ -142,6 +142,13 @@ export type ChangePasswordData = {
   passward:string,
   newpassward: string,
 }
+
+export type AuthResponse = {
+  message: string;
+  token: string;
+  user: Users;
+};
+
 export type Asideleft = "feed" | "myposts" | "community" | "saved";
 export type Privacy = "public" | "following" | "only_me";
 export type NotificationType= "all" | "unread";
