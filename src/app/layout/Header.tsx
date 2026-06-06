@@ -7,7 +7,7 @@ import useAuthAPI from "@/hooks/useAuthAPI";
 // import useNotesAPI from "@/hooks/useNotesAPI";
 
 const tabs: Tab[] = [
-  { name: "Feed", path: "/", icon: Home },
+  { name: "Feed", path: "/home", icon: Home },
   { name: "Profile", path: "/profile", icon: User },
   { name: "Notifications", path: "/notifications", icon: MessageCircle },
 ];
